@@ -99,13 +99,6 @@ hint{color:#94a3b8;font-size:11px;line-height:1.5;display:block;margin-top:6px}
       <div class="quick">
         <button class="qbtn add" data-insert="あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん" data-i18n="qHira">平仮名（五十音）</button>
         <button class="qbtn add" data-insert="アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン" data-i18n="qKata">片仮名（五十音）</button>
-        <button class="qbtn" data-grade="1" data-i18n="qG1">小学1年</button><button class="qbtn" data-grade="2" data-i18n="qG2">小学2年</button>
-        <button class="qbtn" data-grade="3" data-i18n="qG3">小学3年</button><button class="qbtn" data-grade="4" data-i18n="qG4">小学4年</button>
-        <button class="qbtn" data-grade="5" data-i18n="qG5">小学5年</button><button class="qbtn" data-grade="6" data-i18n="qG6">小学6年</button>
-        <button class="qbtn" data-grade="8" data-i18n="qG8">中学</button>
-        <button class="qbtn" data-jlpt="5" data-i18n="qN5">JLPT N5</button>
-        <button class="qbtn" data-jlpt="4" data-i18n="qN4">JLPT N4</button>
-        <button class="qbtn" data-all="1" data-i18n="qAll">常用漢字すべて</button>
       </div>
       <hint data-i18n="inputHint">直接入力するか、上のボタンで一括入力できます。各行＝1組の文字、改行＝空行。かなも字帖になります。</hint>
     </div>
@@ -239,8 +232,6 @@ const I18N = {
     inputLabel: "入力内容（漢字・かな）",
     inputPlaceholder: "練習する漢字・かなを入力（例：山田川花学校）",
     qHira: "平仮名（五十音）", qKata: "片仮名（五十音）",
-    qG1: "小学1年", qG2: "小学2年", qG3: "小学3年", qG4: "小学4年", qG5: "小学5年", qG6: "小学6年", qG8: "中学",
-    qN5: "JLPT N5", qN4: "JLPT N4", qAll: "常用漢字すべて",
     inputHint: "直接入力するか、上のボタンで一括入力できます。各行＝1組の文字、改行＝空行。かなも字帖になります。",
     modeLabel: "レイアウト",
     modeSingle: "単字（1字ずつ一行で反復）", modeWord: "単語（1語ずつ一行で反復）", modePara: "文章（段落書き）",
@@ -264,8 +255,6 @@ const I18N = {
     inputLabel: "输入内容（汉字・假名）",
     inputPlaceholder: "请输入要练习的日语汉字，如：山田川花学校",
     qHira: "平假名 五十音", qKata: "片假名 五十音",
-    qG1: "小学1年", qG2: "小学2年", qG3: "小学3年", qG4: "小学4年", qG5: "小学5年", qG6: "小学6年", qG8: "中学",
-    qN5: "JLPT N5", qN4: "JLPT N4", qAll: "常用汉字 全部",
     inputHint: "可直接打字或点击上方按钮批量填入。每行一组字，换行=插入空行。假名也会被排版为字帖。",
     modeLabel: "排版模式",
     modeSingle: "单字（每字一行反复练）", modeWord: "词组（每词一行反复练）", modePara: "短文（整段书写）",
@@ -704,18 +693,9 @@ function bindUI(){
   $("sel-lang").value = state.lang === "zh" ? "zh" : "ja";
   $("sel-lang").addEventListener("change", e => { state.lang = e.target.value; saveState(); applyLang(); });
 
-  // 快捷填充
+  // 快捷填充：五十音按钮 → 每个假名一行（纵向排列）
   document.querySelectorAll(".qbtn[data-insert]").forEach(btn => {
-    btn.addEventListener("click", () => appendText(btn.dataset.insert));
-  });
-  document.querySelectorAll(".qbtn[data-grade]").forEach(btn => {
-    btn.addEventListener("click", () => appendText(gradeChars(parseInt(btn.dataset.grade, 10))));
-  });
-  document.querySelectorAll(".qbtn[data-jlpt]").forEach(btn => {
-    btn.addEventListener("click", () => appendText(jlptChars(parseInt(btn.dataset.jlpt, 10))));
-  });
-  document.querySelectorAll(".qbtn[data-all]").forEach(btn => {
-    btn.addEventListener("click", () => appendText(allJoyoChars()));
+    btn.addEventListener("click", () => appendText([...btn.dataset.insert].join("\n")));
   });
 
   // 导出 / 打印
@@ -730,31 +710,6 @@ function appendText(s){
   state.text = cur === "" ? s : cur + (cur.endsWith("\n") ? "" : "\n") + s;
   ta.value = state.text;
   saveState(); scheduleRender();
-}
-function gradeChars(g){
-  const out = [];
-  for (const ch in window.KANJI_DICT){
-    const d = window.KANJI_DICT[ch];
-    if (d[2] === g) out.push(ch);
-  }
-  // 按 Unicode 排序
-  return out.sort((a,b) => a.codePointAt(0) - b.codePointAt(0)).join("");
-}
-function jlptChars(lv){
-  const out = [];
-  for (const ch in window.KANJI_DICT){
-    const d = window.KANJI_DICT[ch];
-    if (d[3] === lv) out.push(ch);
-  }
-  return out.sort((a,b) => a.codePointAt(0) - b.codePointAt(0)).join("");
-}
-function allJoyoChars(){
-  const out = [];
-  for (const ch in window.KANJI_DICT){
-    const d = window.KANJI_DICT[ch];
-    if (d[2] && d[2] >= 1 && d[2] <= 8) out.push(ch);
-  }
-  return out.sort((a,b) => a.codePointAt(0) - b.codePointAt(0)).join("");
 }
 
 /* ============ 导出（300 DPI 矢量重绘） ============ */
