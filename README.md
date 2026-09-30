@@ -4,7 +4,7 @@
 
 ## 在线使用
 
-本仓库已启用 GitHub Pages，打开 **https://kanryo33.github.io/shuji/** 即可直接在浏览器中使用（课堂投影推荐）。
+本仓库已启用 GitHub Pages，打开 **https://kanryo33.github.io/kanji/** 即可直接在浏览器中使用（课堂投影推荐）。
 
 ## 功能
 
