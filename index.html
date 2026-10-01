@@ -55,7 +55,7 @@ textarea.txt{width:100%;height:110px;resize:vertical;border:1px solid var(--line
 textarea.txt:focus{outline:2px solid #94a3b8}
 .bookrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:6px 0 8px;font-size:12px;color:#334155}
 .bookrow select.ctl{max-width:170px}
-.bookrow input.ctl{width:64px;height:30px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:#fff;color:#334155;font-size:12px}
+.bookrow input.ctl{width:110px;height:30px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:#fff;color:#334155;font-size:12px}
 #page-hint{font-size:11px;color:#64748b;white-space:normal;line-height:1.4}
 .quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .qbtn{font-size:12px;padding:3px 8px;border:1px solid var(--line);border-radius:6px;background:#f8fafc;cursor:pointer;color:#334155}
@@ -107,7 +107,7 @@ hint{color:#94a3b8;font-size:11px;line-height:1.5;display:block;margin-top:6px}
           <option value="中級" data-i18n="bookJokyu">漢字たまご 中級（未収録）</option>
         </select>
         <label data-i18n="pageLabel">ページ</label>
-        <input class="ctl" type="number" id="inp-page" min="1" max="999" placeholder="例：6">
+        <input class="ctl" type="text" id="inp-page" inputmode="numeric" autocomplete="off" placeholder="例：6 7 10">
         <button class="qbtn add" id="btn-bookfill" data-i18n="bookFill">このページを入力</button>
         <span id="page-hint"></span>
       </div>
@@ -486,22 +486,9 @@ window.KANJI_TAMAGO = {
     ],
     "55": [
       "寺",
-      "お寺",
-      "言",
-      "言います",
-      "言葉",
-      "貝",
-      "田",
-      "田んぼ",
-      "田中さん",
-      "山田さん",
-      "力",
-      "門",
-      "専門学校"
+      "お寺"
     ],
     "56": [
-      "寺",
-      "お寺",
       "言",
       "言います",
       "言葉",
@@ -598,6 +585,7 @@ const I18N = {
     bookLabel: "教材", pageLabel: "ページ", bookFill: "このページを入力",
     bookShokyu: "漢字たまご 初級", bookChukyu: "漢字たまご 初中級（未収録）", bookJokyu: "漢字たまご 中級（未収録）",
     bookMissing: "この教材・ページのデータはまだ登録されていません",
+    pageMissing: "次のページは未収録です：{0}",
     pageHintPrefix: "対応ページ：",
     inputHint: "直接入力するか、上のボタンで一括入力できます。各行＝1組の文字、改行＝空行。かなも字帖になります。",
     modeLabel: "レイアウト",
@@ -625,6 +613,7 @@ const I18N = {
     bookLabel: "教材", pageLabel: "页码", bookFill: "填入该页",
     bookShokyu: "漢字たまご 初级", bookChukyu: "漢字たまご 初中级（未收录）", bookJokyu: "漢字たまご 中级（未收录）",
     bookMissing: "该教材或页码的数据尚未收录",
+    pageMissing: "以下页码未收录：{0}",
     pageHintPrefix: "可用页码：",
     inputHint: "可直接打字或点击上方按钮批量填入。每行一组字，换行=插入空行。假名也会被排版为字帖。",
     modeLabel: "排版模式",
@@ -1102,14 +1091,25 @@ function appendText(s){
   saveState(); scheduleRender();
 }
 
-/* 教材・ページ → 该页词条（每词一行） */
+/* 教材・ページ → 该页词条（每词一行）；支持空格分隔的多个页码（全角/半角均可） */
 function fillBookPage(){
   const book = document.getElementById("sel-book").value;
   const data = (window.KANJI_TAMAGO || {})[book];
   if (!data){ alert(t("bookMissing")); return; }
-  const p = parseInt(document.getElementById("inp-page").value, 10);
-  if (!p || !data[p]){ alert(t("bookMissing")); return; }
-  appendText(data[p].join("\n"));
+  const raw = document.getElementById("inp-page").value;
+  // 全角数字→半角，再提取所有数字（分隔符不限：空格/顿号/逗号均兼容）
+  const half = raw.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+  const nums = (half.match(/\d+/g) || []).map(Number);
+  if (!nums.length){ alert(t("pageMissing", "")); return; }
+  const valid = [], invalid = [];
+  nums.forEach(p => (data[p] ? valid : invalid).push(p));
+  if (!valid.length){ alert(t("bookMissing")); return; }
+  const seen = new Set(), words = [];
+  for (const p of valid)
+    for (const w of data[p])
+      if (!seen.has(w)){ seen.add(w); words.push(w); }
+  appendText(words.join("\n"));
+  if (invalid.length) alert(t("pageMissing", invalid.join(", ")));
 }
 
 /* ============ 导出（300 DPI 矢量重绘） ============ */
