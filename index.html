@@ -878,17 +878,16 @@ function renderAll(container, scale){
   const cellSize = Math.max(14, Math.round(state.cellSize * state.fontScale / 100));
   const bishunH = state.showBishun ? Math.floor(0.6 * cellSize) : 0;
   const rowH = cellSize + bishunH;
-  // 顶部姓名栏/班级栏（每页固定）：栏高 + 间隔
+  // 顶部姓名栏/班级栏：仅第 1 页显示（单页保留；多页时第 2 页起不显示，练习区向上顶对齐）
   const HEADER_H = 38, HEADER_GAP = 8;
-  const gridTop = state.padding[0] + HEADER_H + HEADER_GAP;
   const availW = PAPER_W - state.padding[1] - state.padding[3];
-  const availH = PAPER_H - gridTop - state.padding[2] - 4;
-  const rowsPerPage = Math.max(1, Math.floor((availH + state.rowGap) / (rowH + state.rowGap)));
+  const gridTop1 = state.padding[0] + HEADER_H + HEADER_GAP;
+  const availH1 = PAPER_H - gridTop1 - state.padding[2] - 4;
+  const rowsPerPage = Math.max(1, Math.floor((availH1 + state.rowGap) / (rowH + state.rowGap)));
   const cols = Math.max(1, Math.floor(availW / cellSize));
   const contentW = cols * cellSize;
   const contentH = rowsPerPage * rowH + (rowsPerPage - 1) * state.rowGap;
   const startX = Math.floor(state.padding[3] + (availW - contentW) / 2);
-  const startY = gridTop + Math.floor((availH - contentH) / 2);
   const half = Math.floor(cellSize / 2);
 
   // 更新描红数量上限
@@ -912,14 +911,16 @@ function renderAll(container, scale){
     body.appendChild(pageWrap);
     const cv = new PaperCanvas({ index: p, container: pageWrap, width: PAPER_W, height: PAPER_H, showPageNumber: pageCount > 1, scale: pxScale });
     cv.setTextAlign("center");
-    // 每页固定顶部：姓名栏 + 班级栏
-    drawHeader(cv, startX, contentW, HEADER_H, state.lineColor);
+    // 姓名栏/班级栏：仅第 1 页（单页时保留）；第 2 页起不显示，练习区向上顶对齐
+    const hasHeader = pageCount <= 1 || p === 0;
+    const sY = hasHeader ? gridTop1 + Math.floor((availH1 - contentH) / 2) : state.padding[0];
+    if (hasHeader) drawHeader(cv, startX, contentW, HEADER_H, state.lineColor);
 
     for (let a = 0; a < rowsPerPage; a++){
       const idx = p * rowsPerPage + a;
       if (idx >= rowList.length) break;
       const rowStr = rowList[idx];
-      const y = startY + (rowH + state.rowGap) * a;
+      const y = sY + (rowH + state.rowGap) * a;
       const cellTop = y + bishunH;
       const stripW = cols * cellSize;
 
