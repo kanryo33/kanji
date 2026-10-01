@@ -98,7 +98,7 @@ hint{color:#94a3b8;font-size:11px;line-height:1.5;display:block;margin-top:6px}
   </div>
   <div class="panel print-none">
     <div class="group">
-      <div class="rowline"><label data-i18n="inputLabel">入力内容（漢字・かな）</label></div>
+      <div class="rowline"><label data-i18n="inputLabel">入力内容（漢字・かな）</label><button class="qbtn" id="btn-clear" data-i18n="btnClear">クリア</button></div>
       <div class="bookrow">
         <label data-i18n="bookLabel">教材</label>
         <select class="ctl" id="sel-book">
@@ -580,6 +580,7 @@ const I18N = {
     appTitle: "日本語漢字ドリル生成", appTitleSub: "かな・書き順・マス目 対応",
     btnExport: "画像を書き出す", btnPrint: "印刷",
     inputLabel: "入力内容（漢字・かな）",
+    btnClear: "クリア",
     inputPlaceholder: "練習する漢字・かなを入力（例：山田川花学校）",
     qHira: "平仮名（五十音）", qKata: "片仮名（五十音）",
     bookLabel: "教材", pageLabel: "ページ", bookFill: "このページを入力",
@@ -608,6 +609,7 @@ const I18N = {
     appTitle: "日语汉字字帖生成器", appTitleSub: "假名・笔顺・方格 対応",
     btnExport: "导出图片", btnPrint: "打印",
     inputLabel: "输入内容（汉字・假名）",
+    btnClear: "清空",
     inputPlaceholder: "请输入要练习的日语汉字，如：山田川花学校",
     qHira: "平假名 五十音", qKata: "片假名 五十音",
     bookLabel: "教材", pageLabel: "页码", bookFill: "填入该页",
@@ -1053,6 +1055,9 @@ function bindUI(){
   $("sel-lang").value = state.lang === "zh" ? "zh" : "ja";
   $("sel-lang").addEventListener("change", e => { state.lang = e.target.value; saveState(); applyLang(); });
 
+  // 清空输入框
+  $("btn-clear").addEventListener("click", clearText);
+
   // 快捷填充：五十音按钮 → 每个假名一行（纵向排列）
   document.querySelectorAll(".qbtn[data-insert]").forEach(btn => {
     btn.addEventListener("click", () => appendText([...btn.dataset.insert].join("\n")));
@@ -1080,6 +1085,13 @@ function bindUI(){
   // 导出 / 打印
   $("btn-export").addEventListener("click", exportPNG);
   $("btn-print").addEventListener("click", printDoc);
+}
+
+function clearText(){
+  state.text = "";
+  const ta = document.getElementById("input-text");
+  ta.value = "";
+  saveState(); scheduleRender();
 }
 
 function appendText(s){
