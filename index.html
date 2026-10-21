@@ -144,6 +144,23 @@ hint{color:#94a3b8;font-size:11px;line-height:1.5;display:block;margin-top:6px}
       </div>
     </div>
     <div class="group">
+      <div class="rowline"><label data-i18n="swKana">ふりがなを表示</label>
+        <span class="switch"><input type="checkbox" id="sw-kana"><span class="track"></span><span class="thumb"></span></span>
+      </div>
+      <div class="sep"></div>
+      <div class="rowline"><label data-i18n="kanaPreferLabel">よみ（音／訓）</label>
+        <select class="ctl" id="sel-kana-prefer">
+          <option value="on" data-i18n="kanaOn">音読み（オン）</option>
+          <option value="kun" data-i18n="kanaKun">訓読み（クン）</option>
+        </select>
+      </div>
+      <div class="sep"></div>
+      <div class="slider-row"><label data-i18n="kanaScale">ふりがなの大きさ</label><input type="range" id="rng-kana-scale" min="25" max="70" step="5"><span class="val" id="v-kana-scale">40%</span></div>
+      <div class="sep"></div>
+      <div class="rowline"><label data-i18n="kanaOverride">個別よみの上書き</label></div>
+      <textarea class="txt" id="ta-kana-override" spellcheck="false" rows="2" style="height:52px" data-i18n="kanaOverrideHint" placeholder="私=わたし"></textarea>
+    </div>
+    <div class="group">
       <div class="rowline"><label data-i18n="cellLabel">マス目タイプ</label>
         <select class="ctl" id="sel-cell">
           <option value="zwg" data-i18n="cellZw">作文マス</option>
@@ -1225,7 +1242,11 @@ const DEFAULTS = {
   blankRow: false,
   blankCol: false,
   showBishun: false,
-  showLeading: true
+  showLeading: true,
+  showKana: false,
+  kanaPrefer: "on",
+  kanaScale: 40,
+  overrides: {}
 };
 const STORE_KEY = "z2h-jp-kanji-v1";
 
@@ -1248,7 +1269,7 @@ const I18N = {
     inputHint: "直接入力するか、上のボタンで一括入力できます。各行＝1組の文字、改行＝空行。かなも字帖になります。",
     modeLabel: "レイアウト",
     modeSingle: "単字（1字ずつ一行で反復）", modeWord: "単語（1語ずつ一行で反復）", modePara: "文章（段落書き）",
-    swBishun: "書き順を表示", swLeading: "最初の字を強調", swBlankRow: "空行を挿入", swBlankCol: "空列を挿入",
+    swBishun: "書き順を表示", swLeading: "最初の字を強調", swBlankRow: "空行を挿入", swBlankCol: "空列を挿入", swKana: "ふりがなを表示", kanaPreferLabel: "よみ（音／訓）", kanaOn: "音読み（オン）", kanaKun: "訓読み（クン）", kanaScale: "ふりがなの大きさ", kanaOverride: "個別よみの上書き", kanaOverrideHint: "未収録・例外の字を 1 行ずつ「字＝よみ」で指定（例：私＝わたし）",
     cellLabel: "マス目タイプ",
     cellZw: "作文マス", cellTz: "田字マス", cellMz: "米字マス", cellHg: "回宮マス", cellJg: "九宮マス", cellHt: "回田マス", cellHm: "回米マス",
     cellSize: "マスの大きさ", rowGap: "行間", padding: "余白",
@@ -1277,7 +1298,7 @@ const I18N = {
     inputHint: "可直接打字或点击上方按钮批量填入。每行一组字，换行=插入空行。假名也会被排版为字帖。",
     modeLabel: "排版模式",
     modeSingle: "单字（每字一行反复练）", modeWord: "词组（每词一行反复练）", modePara: "短文（整段书写）",
-    swBishun: "显示笔顺（書き順）", swLeading: "首字高亮", swBlankRow: "插入空行", swBlankCol: "插入空列",
+    swBishun: "显示笔顺（書き順）", swLeading: "首字高亮", swBlankRow: "插入空行", swBlankCol: "插入空列", swKana: "显示振假名", kanaPreferLabel: "读音（音／训）", kanaOn: "音读（On）", kanaKun: "训读（Kun）", kanaScale: "振假名大小", kanaOverride: "逐字读音覆盖", kanaOverrideHint: "对未收录或例外的字，每行用「字＝读音」指定（例：私＝わたし）",
     cellLabel: "方格类型",
     cellZw: "作文格", cellTz: "田字格", cellMz: "米字格", cellHg: "回宫格", cellJg: "九宫格", cellHt: "回田格", cellHm: "回米格",
     cellSize: "方格大小", rowGap: "行间距", padding: "页边距",
@@ -1317,8 +1338,7 @@ function loadState(){
   try{
     const s = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
     if (s && typeof s === "object"){
-      // 清理旧版本遗留的注音相关字段 / 已删除字体
-      delete s.showKana; delete s.kanaPrefer; delete s.kanaScale; delete s.overrides;
+      // ふりがな（読み）表示機能を再追加（KANJIDIC2 ベース）
       if (s.fontFamily === "Yuji Syuku") s.fontFamily = "HGP教科書体";
       // v2：字体大小改为「整体缩放（格子+字）」，旧版字占比值不再适用 → 重置为 100
       if (s.version !== 2){ s.fontScale = 100; s.version = 2; }
@@ -1334,6 +1354,39 @@ function mmToPx(mm){ return mm * MM_TO_PX; }
 function isKanji(c){ return /[\u4E00-\u9FFF\u3400-\u4DBF]/.test(c); }
 function isKana(c){ return /[\u3040-\u30FF\u3005\u3006\u30FC]/.test(c); }
 function hexOf(ch){ return (ch.codePointAt(0)).toString(16).padStart(5,"0"); }
+function kataToHira(s){
+  let out = "";
+  for (const c of s){
+    const code = c.charCodeAt(0);
+    if (code >= 0x30A1 && code <= 0x30F6) out += String.fromCharCode(code - 0x60);
+    else out += c;
+  }
+  return out;
+}
+function pickReading(ch){
+  if (state.overrides && Object.prototype.hasOwnProperty.call(state.overrides, ch)) return state.overrides[ch];
+  const d = window.KANJI_DICT[ch];
+  if (!d) return null;
+  const on = d[0] || [], kun = d[1] || [];
+  let r = (state.kanaPrefer === "kun") ? (kun[0] || on[0]) : (on[0] || kun[0]);
+  if (!r) return null;
+  return kataToHira(r);
+}
+function drawFurigana(cv, ch, cx, cellSize, furiTop, furiH){
+  const r = pickReading(ch);
+  if (!r) return;
+  let fpx = Math.floor(furiH * 0.72);
+  cv.setFont("400 " + fpx + 'px "Klee One", "Yu Gothic", "Meiryo", sans-serif');
+  const tw = cv.measureTextWidth(r);
+  if (tw > cellSize * 0.96){
+    fpx = Math.max(6, Math.floor(fpx * cellSize * 0.96 / tw));
+    cv.setFont("400 " + fpx + 'px "Klee One", "Yu Gothic", "Meiryo", sans-serif');
+  }
+  cv.setFillStyle("#1f2937");
+  cv.setTextAlign("center");
+  cv.setTextBaseline("middle");
+  cv.text(r, cx + cellSize / 2, furiTop + furiH / 2);
+}
 
 /* ============ Canvas 封装（移植自 Z2H） ============ */
 class PaperCanvas{
@@ -1534,7 +1587,8 @@ function renderAll(container, scale){
   // 字体大小 = 整体缩放：格子与字同步缩放（格子基础值由「方格大小」设定）
   const cellSize = Math.max(14, Math.round(state.cellSize * state.fontScale / 100));
   const bishunH = state.showBishun ? Math.floor(0.6 * cellSize) : 0;
-  const rowH = cellSize + bishunH;
+  const furiH = state.showKana ? Math.max(8, Math.floor(state.kanaScale / 100 * cellSize)) : 0;
+  const rowH = cellSize + bishunH + furiH;
   // 顶部姓名栏/班级栏：仅第 1 页显示（单页保留；多页时第 2 页起不显示，练习区向上顶对齐）
   const HEADER_H = 38, HEADER_GAP = 8;
   const availW = PAPER_W - state.padding[1] - state.padding[3];
@@ -1578,12 +1632,21 @@ function renderAll(container, scale){
       if (idx >= rowList.length) break;
       const rowStr = rowList[idx];
       const y = sY + (rowH + state.rowGap) * a;
-      const cellTop = y + bishunH;
+      const cellTop = y + bishunH + furiH;
       const stripW = cols * cellSize;
 
       // 笔顺条（仅单字模式）
       if (state.showBishun && state.mode === "single" && rowStr && rowStr.trim() !== ""){
         drawBishunStrip(cv, rowStr[0], startX, stripW, y, bishunH, state.lineColor);
+      }
+      // 振り仮名（ふりがな）：字格上方に仮名読みを表示
+      if (state.showKana && rowStr && rowStr.trim() !== ""){
+        const furiTop = y + bishunH;
+        for (let c = 0; c < rowStr.length && c < cols; c++){
+          const ch = rowStr[c];
+          if (ch === " " || ch === "　") continue;
+          drawFurigana(cv, ch, startX + c * cellSize, cellSize, furiTop, furiH);
+        }
       }
       // 网格
       drawRowCells(cv, startX, cellTop, cols, cellSize, state.cellType, state.lineColor);
@@ -1642,6 +1705,29 @@ function bindUI(){
 
   $("sw-blank-col").checked = state.blankCol;
   $("sw-blank-col").addEventListener("change", e => { state.blankCol = e.target.checked; saveState(); scheduleRender(); });
+
+  $("sw-kana").checked = state.showKana;
+  $("sw-kana").addEventListener("change", e => { state.showKana = e.target.checked; saveState(); scheduleRender(); });
+  $("sel-kana-prefer").value = state.kanaPrefer;
+  $("sel-kana-prefer").addEventListener("change", e => { state.kanaPrefer = e.target.value; saveState(); scheduleRender(); });
+  const rngKana = $("rng-kana-scale");
+  rngKana.value = state.kanaScale;
+  $("v-kana-scale").textContent = state.kanaScale + "%";
+  rngKana.addEventListener("input", e => {
+    state.kanaScale = parseInt(e.target.value, 10);
+    $("v-kana-scale").textContent = state.kanaScale + "%";
+    saveState(); scheduleRender();
+  });
+  const taOverride = $("ta-kana-override");
+  taOverride.value = Object.entries(state.overrides || {}).map(function(en){ return en[0] + "=" + en[1]; }).join("\n");
+  taOverride.addEventListener("input", function(e){
+    const map = {};
+    (e.target.value || "").split(/\n/).forEach(function(line){
+      const m = line.match(/^(.)\s*=\s*(.+?)\s*$/);
+      if (m) map[m[1]] = m[2];
+    });
+    state.overrides = map; saveState(); scheduleRender();
+  });
 
   $("sel-cell").value = state.cellType;
   $("sel-cell").addEventListener("change", e => { state.cellType = e.target.value; saveState(); scheduleRender(); });
